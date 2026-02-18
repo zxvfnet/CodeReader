@@ -1,0 +1,298 @@
+/* ── Layout ── */
+.app {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  min-height: 100dvh;
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 0 16px env(safe-area-inset-bottom);
+}
+
+/* ── Header ── */
+.app-header {
+  padding: 24px 0 16px;
+  text-align: center;
+}
+
+.app-title {
+  font-size: 1.75rem;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  color: var(--color-accent);
+}
+
+.app-subtitle {
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+  margin-top: 2px;
+}
+
+/* ── Main ── */
+.app-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding-bottom: 32px;
+}
+
+/* ── Scanner section ── */
+.scanner-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* ── Scanner wrapper & overlay ── */
+.scanner-wrapper {
+  position: relative;
+  width: 100%;
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: #000;
+  aspect-ratio: 1;
+}
+
+/* html5-qrcode が生成する要素をリセット */
+.scanner-element {
+  width: 100% !important;
+  border: none !important;
+}
+
+.scanner-element > * {
+  border: none !important;
+}
+
+/* カメラ映像 */
+.scanner-element video {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover;
+}
+
+/* html5-qrcode のデフォルトUIを非表示 */
+.scanner-element img,
+.scanner-element canvas:last-of-type {
+  display: none !important;
+}
+
+/* スキャン枠オーバーレイ */
+.scanner-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.scanner-frame {
+  position: relative;
+  width: min(250px, 65%);
+  aspect-ratio: 1;
+}
+
+.corner {
+  position: absolute;
+  width: 24px;
+  height: 24px;
+  border-color: var(--color-accent);
+  border-style: solid;
+}
+
+.corner.top-left     { top: 0; left: 0;  border-width: 3px 0 0 3px; border-radius: 3px 0 0 0; }
+.corner.top-right    { top: 0; right: 0; border-width: 3px 3px 0 0; border-radius: 0 3px 0 0; }
+.corner.bottom-left  { bottom: 0; left: 0;  border-width: 0 0 3px 3px; border-radius: 0 0 0 3px; }
+.corner.bottom-right { bottom: 0; right: 0; border-width: 0 3px 3px 0; border-radius: 0 0 3px 0; }
+
+.scan-line {
+  position: absolute;
+  left: 4px;
+  right: 4px;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--color-accent), transparent);
+  animation: scan 2s ease-in-out infinite;
+  border-radius: 1px;
+}
+
+@keyframes scan {
+  0%   { top: 4px;    opacity: 1; }
+  45%  { top: calc(100% - 6px); opacity: 1; }
+  50%  { top: calc(100% - 6px); opacity: 0; }
+  55%  { top: 4px;    opacity: 0; }
+  60%  { top: 4px;    opacity: 1; }
+  100% { top: 4px;    opacity: 1; }
+}
+
+/* ── Placeholder (停止中) ── */
+.scanner-placeholder {
+  width: 100%;
+  aspect-ratio: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  background: var(--color-surface);
+  border-radius: var(--radius);
+  border: 2px dashed var(--color-border);
+}
+
+.placeholder-icon {
+  width: 80px;
+  height: 80px;
+  color: var(--color-text-muted);
+}
+
+.placeholder-icon svg {
+  width: 100%;
+  height: 100%;
+}
+
+.placeholder-text {
+  color: var(--color-text-muted);
+  font-size: 0.9rem;
+}
+
+/* ── Error banner ── */
+.error-banner {
+  background: rgba(233, 69, 96, 0.12);
+  border: 1px solid rgba(233, 69, 96, 0.4);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+  font-size: 0.875rem;
+  color: #ff8a9b;
+}
+
+.error-hint {
+  margin-top: 6px;
+  color: var(--color-text-muted);
+  font-size: 0.8rem;
+}
+
+/* ── Scan button ── */
+.scan-btn {
+  width: 100%;
+  padding: 16px;
+  border-radius: var(--radius);
+  border: none;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s, transform 0.1s;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.scan-btn:active {
+  transform: scale(0.97);
+  opacity: 0.85;
+}
+
+.scan-btn--start {
+  background: var(--color-accent);
+  color: #fff;
+}
+
+.scan-btn--stop {
+  background: var(--color-surface-2);
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+}
+
+/* ── History section ── */
+.history-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.history-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.history-title {
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.clear-btn {
+  background: none;
+  border: 1px solid var(--color-border);
+  color: var(--color-text-muted);
+  font-size: 0.8rem;
+  padding: 4px 10px;
+  border-radius: 20px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  list-style: none;
+}
+
+/* ── Scan result card ── */
+.scan-result {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.result-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.result-format {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--color-accent);
+  background: var(--color-accent-dim);
+  padding: 2px 7px;
+  border-radius: 20px;
+}
+
+.result-time {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+}
+
+.result-value {
+  font-size: 0.9rem;
+  word-break: break-all;
+  color: var(--color-text);
+}
+
+.result-link {
+  color: #5b9cf6;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.copy-btn {
+  align-self: flex-start;
+  background: none;
+  border: 1px solid var(--color-border);
+  color: var(--color-text-muted);
+  font-size: 0.78rem;
+  padding: 4px 10px;
+  border-radius: 20px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.copy-btn:active {
+  background: var(--color-border);
+}
