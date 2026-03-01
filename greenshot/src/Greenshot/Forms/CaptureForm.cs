@@ -1151,33 +1151,32 @@ namespace Greenshot.Forms
                     }
                 }
             }
-            else
+
+            // Draw crosshair guide lines for Region/Text mode (during hover, drag, and drop)
+            if (_captureMode != CaptureMode.Window && !IsAnimating(_windowAnimator) && !IsTerminalServerSession)
             {
-                if (!IsTerminalServerSession)
+                using (Pen pen = new Pen(Color.LightSeaGreen))
                 {
-                    using (Pen pen = new Pen(Color.LightSeaGreen))
-                    {
-                        pen.DashStyle = DashStyle.Dot;
-                        NativeRect screenBounds = _capture.ScreenBounds;
-                        graphics.DrawLine(pen, _cursorPos.X, screenBounds.Y, _cursorPos.X, screenBounds.Height);
-                        graphics.DrawLine(pen, screenBounds.X, _cursorPos.Y, screenBounds.Width, _cursorPos.Y);
-                    }
+                    pen.DashStyle = DashStyle.Dot;
+                    NativeRect screenBounds = _capture.ScreenBounds;
+                    graphics.DrawLine(pen, _cursorPos.X, screenBounds.Y, _cursorPos.X, screenBounds.Height);
+                    graphics.DrawLine(pen, screenBounds.X, _cursorPos.Y, screenBounds.Width, _cursorPos.Y);
+                }
 
-                    string xy = _cursorPos.X + " x " + _cursorPos.Y;
-                    using Font f = new Font(FontFamily.GenericSansSerif, 8);
-                    Size xySize = TextRenderer.MeasureText(xy, f);
-                    using GraphicsPath gp = CreateRoundedRectangle(_cursorPos.X + 5, _cursorPos.Y + 5, xySize.Width - 3, xySize.Height, 3);
-                    using (Brush bgBrush = new SolidBrush(Color.FromArgb(200, 217, 240, 227)))
-                    {
-                        graphics.FillPath(bgBrush, gp);
-                    }
+                string xy = _cursorPos.X + " x " + _cursorPos.Y;
+                using Font f = new Font(FontFamily.GenericSansSerif, 8);
+                Size xySize = TextRenderer.MeasureText(xy, f);
+                using GraphicsPath gp = CreateRoundedRectangle(_cursorPos.X + 5, _cursorPos.Y + 5, xySize.Width - 3, xySize.Height, 3);
+                using (Brush bgBrush = new SolidBrush(Color.FromArgb(200, 217, 240, 227)))
+                {
+                    graphics.FillPath(bgBrush, gp);
+                }
 
-                    using (Pen pen = new Pen(Color.SeaGreen))
-                    {
-                        graphics.DrawPath(pen, gp);
-                        Point coordinatePosition = new Point(_cursorPos.X + 5, _cursorPos.Y + 5);
-                        graphics.DrawString(xy, f, pen.Brush, coordinatePosition);
-                    }
+                using (Pen pen = new Pen(Color.SeaGreen))
+                {
+                    graphics.DrawPath(pen, gp);
+                    Point coordinatePosition = new Point(_cursorPos.X + 5, _cursorPos.Y + 5);
+                    graphics.DrawString(xy, f, pen.Brush, coordinatePosition);
                 }
             }
 
