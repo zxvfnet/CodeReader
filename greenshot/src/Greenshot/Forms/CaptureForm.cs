@@ -1172,11 +1172,11 @@ namespace Greenshot.Forms
                     graphics.FillPath(bgBrush, gp);
                 }
 
-                using (Pen pen = new Pen(Color.SeaGreen))
+                using (Pen borderPen = new Pen(Color.SeaGreen))
                 {
-                    graphics.DrawPath(pen, gp);
+                    graphics.DrawPath(borderPen, gp);
                     Point coordinatePosition = new Point(_cursorPos.X + 5, _cursorPos.Y + 5);
-                    graphics.DrawString(xy, f, pen.Brush, coordinatePosition);
+                    graphics.DrawString(xy, f, borderPen.Brush, coordinatePosition);
                 }
             }
 
