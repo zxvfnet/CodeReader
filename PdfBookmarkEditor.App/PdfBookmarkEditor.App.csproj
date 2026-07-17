@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+    <!-- Linux/macOS 上でも Windows 向けビルドを可能にする -->
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <AssemblyName>PdfBookmarkEditor</AssemblyName>
+    <RootNamespace>PdfBookmarkEditor.App</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\PdfBookmarkEditor.Core\PdfBookmarkEditor.Core.csproj" />
+  </ItemGroup>
+
+</Project>
