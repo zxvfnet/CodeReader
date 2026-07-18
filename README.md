@@ -27,7 +27,7 @@ dotnet build -c Release
 dotnet run --project PdfBookmarkEditor.App
 ```
 
-.NET 8 SDK が必要です。Linux/macOS では GUI は実行できませんが、
+.NET 10 SDK が必要です。Linux/macOS では GUI は実行できませんが、
 `EnableWindowsTargeting` によりビルドとテストは可能です。
 
 ### テスト
