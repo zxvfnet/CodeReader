@@ -1,7 +1,5 @@
-using iText.Commons.Exceptions;
-using iText.Kernel.Exceptions;
-using iText.Kernel.Pdf;
-using iText.Kernel.Pdf.Navigation;
+using PdfSharp.Pdf;
+using PdfSharp.Pdf.IO;
 
 namespace PdfBookmarkEditor.Core;
 
@@ -19,8 +17,8 @@ public class PdfDocumentInfo
 }
 
 /// <summary>
-/// iText を用いた PDF しおり(アウトライン)の読み書き。
-/// 保存はしおりのみ差し替え、本文・注釈・メタデータは変更しない。
+/// PDFsharp を用いた PDF しおり(アウトライン)の読み書き。
+/// 保存はしおりを差し替えてファイル全体を書き直す(本文・ページは保持)。
 /// </summary>
 public static class PdfBookmarkService
 {
@@ -29,66 +27,52 @@ public static class PdfBookmarkService
     /// <exception cref="PdfLoadException">破損・非PDFなど読み込み不能の場合。</exception>
     public static PdfDocumentInfo Load(string path)
     {
-        try
+        PdfDocument doc = OpenForModify(path);
+        using (doc)
         {
-            using var pdf = new PdfDocument(new PdfReader(path));
-            int pageCount = pdf.GetNumberOfPages();
+            int pageCount = doc.PageCount;
+            var pageIndex = BuildPageIndex(doc);
             var bookmarks = new List<BookmarkNode>();
-            var root = pdf.GetOutlines(true);
-            if (root != null)
+            foreach (var outline in doc.Outlines)
             {
-                foreach (var child in root.GetAllChildren())
-                {
-                    bookmarks.Add(ReadOutline(child, pdf));
-                }
+                bookmarks.Add(ReadOutline(outline, pageIndex));
             }
             return new PdfDocumentInfo(pageCount, bookmarks);
-        }
-        catch (BadPasswordException e)
-        {
-            throw new PdfEncryptedException(path, e);
-        }
-        catch (Exception e) when (e is ITextException or IOException)
-        {
-            throw new PdfLoadException(path, e);
         }
     }
 
     /// <summary>
     /// sourcePath のPDFのしおりを bookmarks で差し替えて destPath に保存する。
-    /// destPath が sourcePath と同一の場合は一時ファイル経由で安全に置換する。
+    /// 一時ファイルへ書き出してから置換するため、失敗時に既存ファイルを壊さない
+    /// (destPath が sourcePath と同一の場合も安全)。
     /// </summary>
     /// <exception cref="BookmarkValidationException">タイトル空・ページ範囲外がある場合。</exception>
+    /// <exception cref="PdfEncryptedException">パスワード付きPDFの場合。</exception>
     /// <exception cref="PdfSaveException">書き込みに失敗した場合。</exception>
     public static void Save(string sourcePath, string destPath, IReadOnlyList<BookmarkNode> bookmarks)
     {
-        // 常に一時ファイルへ書き出し、成功時のみ destPath へ置換する。
-        // 途中失敗しても既存の destPath(= sourcePath の場合を含む)を壊さない。
         string writePath = destPath + ".tmp-" + Guid.NewGuid().ToString("N");
         try
         {
-            using (var pdf = new PdfDocument(new PdfReader(sourcePath), new PdfWriter(writePath)))
+            using (var doc = OpenForModify(sourcePath))
             {
-                Validate(bookmarks, pdf.GetNumberOfPages());
+                Validate(bookmarks, doc.PageCount);
 
-                // 既存アウトラインを取り除いてから空のルートを作り直す
-                pdf.GetCatalog().GetPdfObject().Remove(PdfName.Outlines);
-                var root = pdf.GetOutlines(true)
-                    ?? throw new InvalidOperationException("アウトラインルートを作成できません。");
+                doc.Outlines.Clear();
                 foreach (var node in bookmarks)
                 {
-                    WriteOutline(root, node, pdf);
+                    WriteOutline(doc.Outlines, node, doc);
                 }
+                doc.Save(writePath);
             }
-
             File.Move(writePath, destPath, overwrite: true);
         }
-        catch (BookmarkValidationException)
+        catch (PdfBookmarkException)
         {
             CleanupTemp(writePath);
             throw;
         }
-        catch (Exception e) when (e is ITextException or IOException or UnauthorizedAccessException)
+        catch (Exception e)
         {
             CleanupTemp(writePath);
             throw new PdfSaveException(destPath, e);
@@ -105,6 +89,127 @@ public static class PdfBookmarkService
             throw new BookmarkValidationException(errors);
         }
     }
+
+    // ---- 読み込み補助 ----------------------------------------------------
+
+    /// <summary>PDFを編集モードで開く。暗号化・破損を専用例外に変換する。</summary>
+    private static PdfDocument OpenForModify(string path)
+    {
+        try
+        {
+            return PdfReader.Open(path, PdfDocumentOpenMode.Modify);
+        }
+        catch (PdfReaderException e) when (IsPasswordError(e))
+        {
+            throw new PdfEncryptedException(path, e);
+        }
+        catch (Exception e)
+        {
+            throw new PdfLoadException(path, e);
+        }
+    }
+
+    private static bool IsPasswordError(Exception e) =>
+        e.Message.Contains("password", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>ページオブジェクト→ページ番号(1始まり)の対応表を作る。</summary>
+    private static Dictionary<PdfPage, int> BuildPageIndex(PdfDocument doc)
+    {
+        var map = new Dictionary<PdfPage, int>(ReferenceEqualityComparer.Instance);
+        for (int i = 0; i < doc.PageCount; i++)
+        {
+            map[doc.Pages[i]] = i + 1;
+        }
+        return map;
+    }
+
+    private static BookmarkNode ReadOutline(PdfOutline outline, Dictionary<PdfPage, int> pageIndex)
+    {
+        var node = new BookmarkNode
+        {
+            Title = outline.Title ?? "",
+            Page = ResolvePage(outline, pageIndex),
+            Bold = outline.Style is PdfOutlineStyle.Bold or PdfOutlineStyle.BoldItalic,
+            Italic = outline.Style is PdfOutlineStyle.Italic or PdfOutlineStyle.BoldItalic,
+            Expanded = IsExpanded(outline),
+        };
+        foreach (var child in outline.Outlines)
+        {
+            node.Children.Add(ReadOutline(child, pageIndex));
+        }
+        return node;
+    }
+
+    /// <summary>
+    /// しおりのジャンプ先ページ(1始まり)を返す。明示的宛先のみ解決し、
+    /// 名前付き宛先など解決不能なものは null(ページ未設定)とする。
+    /// </summary>
+    private static int? ResolvePage(PdfOutline outline, Dictionary<PdfPage, int> pageIndex)
+    {
+        var page = outline.DestinationPage;
+        if (page != null && pageIndex.TryGetValue(page, out int number))
+        {
+            return number;
+        }
+        return null;
+    }
+
+    /// <summary>
+    /// PDFsharp の Opened プロパティは /Count を反映しないため、
+    /// アウトライン辞書の /Count の符号(正=展開)から自前で判定する。
+    /// </summary>
+    private static bool IsExpanded(PdfOutline outline)
+    {
+        return outline.Elements.ContainsKey("/Count")
+            && outline.Elements.GetInteger("/Count") > 0;
+    }
+
+    // ---- 書き込み補助 ----------------------------------------------------
+
+    private static void WriteOutline(PdfOutlineCollection parent, BookmarkNode node, PdfDocument doc)
+    {
+        PdfPage? page = node.Page is int pageNumber ? doc.Pages[pageNumber - 1] : null;
+        var style = (node.Bold, node.Italic) switch
+        {
+            (true, true) => PdfOutlineStyle.BoldItalic,
+            (true, false) => PdfOutlineStyle.Bold,
+            (false, true) => PdfOutlineStyle.Italic,
+            _ => PdfOutlineStyle.Regular,
+        };
+
+        // page が null(ページ未設定)でも PDFsharp は宛先なしのしおりとして受け付ける。
+        var outline = parent.Add(node.Title, page!, node.Expanded, style);
+
+        foreach (var child in node.Children)
+        {
+            WriteOutline(outline.Outlines, child, doc);
+        }
+
+        // 展開/折りたたみは /Count の符号で表す(PDFsharp は自動出力しない)。
+        // 絶対値は展開時に見える子孫数。子を持つノードにのみ書く。
+        if (node.Children.Count > 0)
+        {
+            int visible = VisibleDescendantCount(node);
+            outline.Elements.SetInteger("/Count", node.Expanded ? visible : -visible);
+        }
+    }
+
+    /// <summary>node を展開したときにその下に表示される項目数(子孫の展開状態を考慮)。</summary>
+    private static int VisibleDescendantCount(BookmarkNode node)
+    {
+        int total = 0;
+        foreach (var child in node.Children)
+        {
+            total += 1;
+            if (child.Expanded && child.Children.Count > 0)
+            {
+                total += VisibleDescendantCount(child);
+            }
+        }
+        return total;
+    }
+
+    // ---- 検証 ------------------------------------------------------------
 
     private static void ValidateNodes(
         IReadOnlyList<BookmarkNode> nodes, int pageCount, string parentPath, List<string> errors)
@@ -128,96 +233,5 @@ public static class PdfBookmarkService
     private static void CleanupTemp(string writePath)
     {
         try { File.Delete(writePath); } catch { /* 後始末失敗は無視 */ }
-    }
-
-    private static BookmarkNode ReadOutline(PdfOutline outline, PdfDocument pdf)
-    {
-        var content = outline.GetContent();
-        int flags = content.GetAsNumber(PdfName.F)?.IntValue() ?? 0;
-        var count = content.GetAsNumber(PdfName.Count);
-
-        var node = new BookmarkNode
-        {
-            Title = outline.GetTitle(),
-            Page = ResolvePage(outline, pdf),
-            Italic = (flags & 1) != 0,
-            Bold = (flags & 2) != 0,
-            Expanded = count != null && count.IntValue() > 0,
-        };
-        foreach (var child in outline.GetAllChildren())
-        {
-            node.Children.Add(ReadOutline(child, pdf));
-        }
-        return node;
-    }
-
-    /// <summary>
-    /// しおりのジャンプ先をページ番号(1始まり)へ解決する。
-    /// /Dest、名前付き宛先、/A の GoTo アクションに対応。解決不能なら null。
-    /// </summary>
-    private static int? ResolvePage(PdfOutline outline, PdfDocument pdf)
-    {
-        var dest = outline.GetDestination();
-        if (dest == null)
-        {
-            var action = outline.GetContent().GetAsDictionary(PdfName.A);
-            if (action != null && PdfName.GoTo.Equals(action.GetAsName(PdfName.S)))
-            {
-                var d = action.Get(PdfName.D);
-                if (d != null)
-                {
-                    dest = PdfDestination.MakeDestination(d);
-                }
-            }
-        }
-        if (dest == null)
-        {
-            return null;
-        }
-
-        try
-        {
-            var names = pdf.GetCatalog().GetNameTree(PdfName.Dests);
-            var pageObj = dest.GetDestinationPage(names);
-            if (pageObj is PdfDictionary pageDict)
-            {
-                int number = pdf.GetPageNumber(pageDict);
-                return number >= 1 ? number : null;
-            }
-        }
-        catch (PdfException)
-        {
-            // 壊れた宛先は「ページ未設定」として扱う
-        }
-        return null;
-    }
-
-    private static void WriteOutline(PdfOutline parent, BookmarkNode node, PdfDocument pdf)
-    {
-        var outline = parent.AddOutline(node.Title);
-        if (node.Page is int pageNumber)
-        {
-            var page = pdf.GetPage(pageNumber);
-            // [page /XYZ null top null] : ページ上端へ、左位置とズームは現状維持
-            var destArray = new PdfArray();
-            destArray.Add(page.GetPdfObject());
-            destArray.Add(PdfName.XYZ);
-            destArray.Add(PdfNull.PDF_NULL);
-            destArray.Add(new PdfNumber(page.GetPageSize().GetTop()));
-            destArray.Add(PdfNull.PDF_NULL);
-            outline.AddDestination(PdfDestination.MakeDestination(destArray));
-        }
-
-        int style = (node.Italic ? PdfOutline.FLAG_ITALIC : 0) | (node.Bold ? PdfOutline.FLAG_BOLD : 0);
-        if (style != 0)
-        {
-            outline.SetStyle(style);
-        }
-        outline.SetOpen(node.Expanded);
-
-        foreach (var child in node.Children)
-        {
-            WriteOutline(outline, child, pdf);
-        }
     }
 }

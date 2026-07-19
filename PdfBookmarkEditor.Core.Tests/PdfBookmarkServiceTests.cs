@@ -117,22 +117,13 @@ public class PdfBookmarkServiceTests : IDisposable
     }
 
     [Fact]
-    public void Load_NamedDestination_ResolvesToPageNumber()
+    public void Load_OutlineWithoutDestination_BecomesPageUnset_AndSurvivesSave()
     {
-        string path = TestPdf.CreateWithNamedAndMissingDest(_dir);
-
-        var info = PdfBookmarkService.Load(path);
-
-        Assert.Equal(2, info.Bookmarks.Count);
-        Assert.Equal(2, info.Bookmarks[0].Page);
-    }
-
-    [Fact]
-    public void Load_MissingDestination_BecomesPageUnset_AndSurvivesSave()
-    {
-        string source = TestPdf.CreateWithNamedAndMissingDest(_dir);
+        string source = TestPdf.CreateWithMissingDest(_dir);
 
         var info = PdfBookmarkService.Load(source);
+        Assert.Equal(2, info.Bookmarks.Count);
+        Assert.Equal(2, info.Bookmarks[0].Page);
         Assert.Null(info.Bookmarks[1].Page);
 
         string dest = Path.Combine(_dir, "unset.pdf");
@@ -207,7 +198,7 @@ public class PdfBookmarkServiceTests : IDisposable
             Assert.Equal(expected[i].Italic, actual[i].Italic);
             if (expected[i].Children.Count > 0)
             {
-                // 展開状態は子を持つノードにのみ意味を持つ(PDF仕様上、葉には保存されない)
+                // 展開状態は子を持つノードにのみ意味を持つ
                 Assert.Equal(expected[i].Expanded, actual[i].Expanded);
             }
             AssertTreesEqual(expected[i].Children, actual[i].Children);
