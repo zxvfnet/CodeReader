@@ -1,0 +1,93 @@
+{
+  "01_clean.png": [
+    {
+      "format": "QRCode",
+      "text": "https://example.com/item?id=12345"
+    },
+    {
+      "format": "QRCode",
+      "text": "日本語テキスト：品番A-001 数量10"
+    },
+    {
+      "format": "QRCode",
+      "text": "漢字モード試験"
+    },
+    {
+      "format": "Code128",
+      "text": "LOT-2026-1018"
+    },
+    {
+      "format": "EAN13",
+      "text": "4901234567894"
+    },
+    {
+      "format": "Code39",
+      "text": "ABC-123"
+    },
+    {
+      "format": "DataMatrix",
+      "text": "DM:SERIAL-0001"
+    }
+  ],
+  "02_photo_like.jpg": [
+    {
+      "format": "QRCode",
+      "text": "https://example.com/item?id=12345"
+    },
+    {
+      "format": "QRCode",
+      "text": "日本語テキスト：品番A-001 数量10"
+    },
+    {
+      "format": "QRCode",
+      "text": "漢字モード試験"
+    },
+    {
+      "format": "Code128",
+      "text": "LOT-2026-1018"
+    },
+    {
+      "format": "EAN13",
+      "text": "4901234567894"
+    },
+    {
+      "format": "Code39",
+      "text": "ABC-123"
+    },
+    {
+      "format": "DataMatrix",
+      "text": "DM:SERIAL-0001"
+    }
+  ],
+  "03_small.png": [
+    {
+      "format": "QRCode",
+      "text": "https://example.com/item?id=12345"
+    },
+    {
+      "format": "QRCode",
+      "text": "日本語テキスト：品番A-001 数量10"
+    },
+    {
+      "format": "QRCode",
+      "text": "漢字モード試験"
+    },
+    {
+      "format": "Code128",
+      "text": "LOT-2026-1018"
+    },
+    {
+      "format": "EAN13",
+      "text": "4901234567894"
+    },
+    {
+      "format": "Code39",
+      "text": "ABC-123"
+    },
+    {
+      "format": "DataMatrix",
+      "text": "DM:SERIAL-0001"
+    }
+  ],
+  "04_no_code.png": []
+}
