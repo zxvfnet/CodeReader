@@ -1,0 +1,19 @@
+[project]
+name = "code-reader"
+version = "0.1.0"
+description = "Read multiple QR codes and barcodes from images and export them as CSV"
+requires-python = ">=3.10"
+dependencies = [
+    "zxing-cpp>=2.3",
+    "Pillow>=10.0",
+    "ttkbootstrap>=2.0",
+    "tkinterdnd2>=0.4",
+]
+
+[project.optional-dependencies]
+dev = ["pytest"]
+
+[tool.pytest.ini_options]
+# Lets tests import code_reader and tests.support without installing.
+pythonpath = ["."]
+testpaths = ["tests"]

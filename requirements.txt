@@ -1,0 +1,5 @@
+zxing-cpp>=2.3
+Pillow>=10.0
+ttkbootstrap>=2.0
+tkinterdnd2>=0.4
+pytest
